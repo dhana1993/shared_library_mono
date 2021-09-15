@@ -1,0 +1,66 @@
+@Library('my_shared_library') _
+pipeline {
+    agent any
+    environment {
+        EMAIL_TO = 'dhanalakshmi@monocept.com,arun.kr@ext.careinsurance.com,,urvashisharma@ext.careinsurance.com,ramesh.kmr@ext.careinsurance.com,padmaja@ext.careinsurance.com,sunder.shyam@ext.careinsurance.com,roygourav@ext.careinsurance.com'
+        //WILDFLY_USER = credentials('wildfly_user')
+        //WILDFLY_psw = credentials('wildfly_password')
+        WILDFLY = credentials('WILDFLY_Faveoui_QC')
+        BRANCH_NAME = '*/Faveo_Care_Insurance_QC'
+        GIT_URL = 'https://sourcecode.religarehealthinsurance.com/monocept/faveo/faveoui/newfaveo/faveoui.git'
+        BACKUP_PATH = '$(date +"%d-%m-%Y")-$BUILD_NUMBER'
+        FROM_PATH = 'dist/NewFaveo.war'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    FAILED_STAGE =env.STAGE_NAME
+                    Faveo_clone()
+
+                }
+            }
+
+        }
+        stage('NPM Build') {
+            steps {
+                script {
+                    FAILED_STAGE = env.STAGE_NAME
+                    Faveo_Build()
+
+                }
+            }
+        }
+        stage('backup') {
+            steps {
+                script {
+                    FAILED_STAGE = env.STAGE_NAME
+                    Faveo_Backup()
+
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                script {
+                    FAILED_STAGE = env.STAGE_NAME
+                    Faveoui_deployment()
+
+                }
+            }
+        }
+
+    }
+    post {
+        success {
+            emailext body:'${SCRIPT,template="groovy-html.template"}\n SonarQube result URL:  https://sonarqube.religarehealthinsurance.com/dashboard/index/Faveoui_QC',
+                    mimeType: 'text/html',
+                    to: "${EMAIL_TO}",
+                    subject: 'Jenkins build information : $PROJECT_NAME - #$BUILD_NUMBER '
+
+        }
+        failure {
+            mailfailure()
+        }
+    }
+}
